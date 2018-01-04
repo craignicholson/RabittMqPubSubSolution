@@ -33,7 +33,7 @@ namespace Producer
         /// </param>
         public static void Main(string[] args)
         {
-            var hostName = "localhost";
+            var hostName = "etss-appdev";
             var userName = "electsolve";
             var password = "electsolve";
             var exchange = "OutageEventChangedNotification";
@@ -42,19 +42,21 @@ namespace Producer
 
             try
             {
-                // var factory = new ConnectionFactory { HostName = hostName, UserName = userName, Password = password };
-                var factory = new ConnectionFactory { HostName = hostName };
+                var factory = new ConnectionFactory { HostName = hostName, UserName = userName, Password = password };
+                // var factory = new ConnectionFactory { HostName = hostName };
                 using (var connection = factory.CreateConnection())
                 using (var channel = connection.CreateModel())
                 {
-                    // declare the exchange / queue and the type, fanout for Pub/Sub
-                    channel.ExchangeDeclare(exchange, ExchangeType.Fanout);
+
+                    // declare the exchange / queue and the type, fan out for Pub/Sub
+                    channel.ExchangeDeclare(exchange, ExchangeType.Fanout, durable: true, autoDelete: false);
 
                     // create some headers and alter other basic properties
+                    // delivery mode 2 (persistent) 
                     IBasicProperties properties = new BasicProperties()
                     {
                         ContentType = "text/plain",
-                        DeliveryMode = 2,
+                        DeliveryMode  = 2,
                         Headers = new Dictionary<string, object>
                          {
                             { "ObjectType", "outageEvent[]" },
@@ -63,7 +65,7 @@ namespace Producer
                             { "AnyKeyThatWillHelpYou", "SaveOurFuture" },
                             { "IsWorthy", true },
                             { "latitude", 51.5252949 },
-                            { "logitude", -0.0905493 },
+                            { "longitude", -0.0905493 },
                             { "SByte.MinValue", sbyte.MinValue }
                          },
                         Expiration = "36000000",
@@ -73,7 +75,7 @@ namespace Producer
                     // body is the message we are sending
                     var body = XmlSerializeIntoBytes(outageEvents);
 
-                    // Since we declare an exchnageType of fanout, routingKey will be ignored.  All consumers will get the message
+                    // Since we declare an exchangeType of fan out, routingKey will be ignored.  All consumers will get the message
                     // there is no need to route to specific consumers.
                     channel.BasicPublish(exchange, string.Empty, properties, body);
                     Console.WriteLine(" [x] Sent {0} bytes", body.Length);
@@ -131,7 +133,7 @@ namespace Producer
             using (var ms = new MemoryStream())
             {
                 var xs = new XmlSerializer(typeof(outageEvent[]));
-                var xmlTextWriter = new XmlTextWriter(ms, Encoding.UTF8);
+                // var xmlTextWriter = new XmlTextWriter(ms, Encoding.UTF8);
                 xs.Serialize(ms, outageEvents);
                 return ms.ToArray();
             }

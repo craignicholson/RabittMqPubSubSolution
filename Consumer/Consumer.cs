@@ -30,19 +30,22 @@ namespace Consumer
         {
             try
             {
-                var hostName = "localhost";
+                var hostName = "etss-appdev";
                 var userName = "electsolve";
                 var password = "electsolve";
                 var exchange = "OutageEventChangedNotification";
 
-                var factory = new ConnectionFactory() { HostName = hostName };
+                var factory = new ConnectionFactory { HostName = hostName, UserName = userName, Password = password };
+                // var factory = new ConnectionFactory { HostName = hostName };
                 using (var connection = factory.CreateConnection())
                 using (var channel = connection.CreateModel())
                 {
-                    channel.ExchangeDeclare(exchange: exchange, type: ExchangeType.Fanout);
+                    channel.ExchangeDeclare(exchange: exchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
 
-                    // Random Queue Name, this way each consumer gets it's own queue, what about durability for all cosumers?
-                    var queueName = channel.QueueDeclare().QueueName;
+                    channel.QueueDeclare(queue: "OutageEventChangeNotificationQueue", durable: true, exclusive: false, arguments: null);
+
+                    // Random Queue Name, this way each consumer gets it's own queue, what about durability for all consumers?
+                    var queueName = "OutageEventChangeNotificationQueue"; //channel.QueueDeclare().QueueName;
                     channel.QueueBind(queue: queueName, exchange: exchange, routingKey: string.Empty);
 
                     Console.WriteLine(" [*] Waiting for outageEvents.");
@@ -59,7 +62,7 @@ namespace Consumer
                                 foreach (var header in headers)
                                 {
                                     // strings are encoded at byte[] so we have to parse these out
-                                    // differnent than the other object values, more tests are needed
+                                    // different than the other object values, more tests are needed
                                     if (header.Value.GetType().Name == "Byte[]")
                                     {
                                         var headerBytes = (byte[])header.Value;
@@ -86,6 +89,7 @@ namespace Consumer
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                Console.ReadLine();
             }
         }
 
